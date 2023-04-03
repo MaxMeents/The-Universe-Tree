@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic List</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.1.1/d3.min.js"></script>
+    <style>
+      ul ul {
+  display: none;
+  list-style-type: none;
+
+}
+h1{
+	font-family: 'Montserrat', sans-serif;
+}
+li {
+	font-family: 'Montserrat', sans-serif;
+  position: relative;
+	user-select: none;
+  padding-left:10px;
+	list-style-type: none;
+	line-height:22px;
+	font-size:22px;
+	font-weight:1000;
+}
+
+.arrow {
+  display: inline-block;
+  position: absolute;
+  left: -15px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  vertical-align: middle;
+}
+
+.arrow-right {
+  border-width: 10px 0 10px 18px;
+  border-color: transparent transparent transparent #000;
+}
+
+.arrow-down {
+  border-width: 18px 10px 0 10px;
+  border-color: #000 transparent transparent transparent;
+}
+
+    </style>
+</head>
+<body>
+    <ul id="mainList"></ul>
+    
+    <script>
+        const url = "https://raw.githubusercontent.com/MaxMeents/Universe-In-A-Folder/main/All/All.txt";
+        const baseUrl = "https://raw.githubusercontent.com/MaxMeents/Universe-In-A-Folder/main";
+        let data;
+
+        fetch(url)
+            .then(response => response.text())
+            .then(text => {
+                data = text.split("\n");
+                populateList(data, $("#mainList"));
+            });
+
+            function populateList(data, container) {
+    const listItemIndexes = data.reduce((acc, _, index) => {
+        if ((index) % 3 === 0 && index != 0) {
+            acc.push(index - 2);
+        }
+        return acc;
+    }, []);
+
+    for (let i = 0; i < listItemIndexes.length; i++) {
+        const listTitle = data[listItemIndexes[i]];
+        const listItemUrl = baseUrl + data[listItemIndexes[i] + 1];
+        
+        const listItem = $("<li>")
+            .text(listTitle)
+            .addClass("list-item")
+            .attr("c", listItemUrl)
+            .on("click", handleItemClick);
+        container.append(listItem).css("display","block")
+        
+
+    }
+    
+   
+}
+
+function handleItemClick(event) {
+    event.preventDefault();
+    event.stopPropagation(); // Prevent parent click event.
+    
+    const $target = $(event.target);
+    console.log($target)
+    
+    const subListUrl = $target.attr("c");
+    if(subListUrl.includes("://youtu")){
+      window.open(subListUrl, '_blank');
+    }
+    console.log(subListUrl)
+    
+    const subListContainer = $("<ul>").addClass("sub-list");
+
+    const siblingLists = $target.siblings("ul");
+    let shouldFetchSublist = true;
+    if (siblingLists.length) {
+        siblingLists.remove();
+        shouldFetchSublist = false;
+    }
+
+    // Fetch and display the sublist only if the flag indicates to do so
+    if (shouldFetchSublist) {
+        fetch(subListUrl)
+            .then(response => response.text())
+            .then(text => {
+                // If the fetched text is empty, there is no further sub list to fetch
+                if (text.trim() === "") {
+                    console.log("No further sub list available");
+                    return;
+                }
+
+                const subListData = text.split("\n");
+                populateList(subListData, subListContainer);
+                const subListItems = subListContainer.find("li");
+                subListItems.each((index, subListItem) => {
+                    const listItemData = subListData[(3 * index) + 2];
+
+                    if (!listItemData) {
+                        return;
+                    }
+
+                    let listItemUrl;
+
+                    if (listItemData.includes("://youtu")) {
+                        listItemUrl = listItemData;
+                    } else {
+                        listItemUrl = baseUrl + listItemData.replace(/#/g, '%23');;
+                    }
+
+                    $(subListItem).attr("c", listItemUrl);
+                    $(subListItem).on("click", handleItemClick);
+                });                
+                $target.after(subListContainer);
+            });
+    }
+}
+
+
+$(document).ready(function(){
+  $('ul li').css('cursor', 'pointer');
+  window.setInterval(function(){
+      $('li').each(function() {
+    var attrValue = $(this).attr('c');
+    var containsURL = attrValue && attrValue.includes('https://raw.githubusercontent.com/MaxMeents/Universe-In-A-Folder/main');
+    if ($(this).children('ul').children().not($(this)).length || containsURL) {
+      if(!$(this).children().hasClass("arrow")){  
+      $(this).prepend('<span class="arrow arrow-right"></span>');
+        console.log("true")
+      }
+    }
+});
+    }, 1000)
+});
+    </script>
+</body>
+</html>
